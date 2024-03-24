@@ -1,15 +1,47 @@
 import rclpy
 from rclpy.node import Node
 
+from xarm_msgs.srv import PlanJoint
+from xarm_msgs.srv import PlanExec
 from geometry_msgs.msg import TwistStamped
 from tf2_ros.transform_listener import TransformListener
 from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
-
-from keras.models import load_model
+import random
+import sys
+#from keras.models import load_model
 import argparse
 import numpy as np
 
+
+class xarmJointPlanningClient(Node):
+
+    def __init__(self):
+        super().__init__('xarm_joint_planning_client')
+        self.plan_cli = self.create_client(PlanJoint, 'xarm_joint_plan')
+        self.exec_cli = self.create_client(PlanExec, 'xarm_exec_plan')
+         
+
+    def plan_and_execute(self,pose):
+        while not self.plan_cli.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('service not available, waiting again...')
+        self.plan_req = PlanJoint.Request()
+        self.plan_req.target = pose
+        self.plan_future = self.plan_cli.call_async(self.plan_req)
+        rclpy.spin_until_future_complete(self, self.plan_future)
+        res = self.plan_future.result()
+        if res.success:
+            self.get_logger().info('Planning success executing...')
+            while not self.exec_cli.wait_for_service(timeout_sec=1.0):
+                self.get_logger().info('service not available, waiting again...')
+            self.exec_req = PlanExec.Request()
+            self.exec_req.wait = True
+            self.exec_future = self.exec_cli.call_async(self.exec_req)
+            rclpy.spin_until_future_complete(self, self.exec_future)
+            return self.exec_future.result()
+        else:
+            self.get_logger().info('Planning Failed!')
+            return False
 
 class PolicyPublisher(Node):
 
@@ -22,6 +54,8 @@ class PolicyPublisher(Node):
         self.decoy_pose = decoy_pose
         self.actions = actions
         self.model = model
+        self.client = xarmJointPlanningClient()
+
 
         self.policy = policy
         self.ee_pose = None
@@ -29,13 +63,29 @@ class PolicyPublisher(Node):
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
         # We publish end-effector commands to this topic
-        self.publisher_ = self.create_publisher(TwistStamped, '/servo_server/delta_twist_cmds', 10)
+        #self.publisher_ = self.create_publisher(TwistStamped, '/servo_server/delta_twist_cmds', 10)
 
         # This will get the next action from the policy every 0.1 seconds
         self.policy_timer = self.create_timer(0.5, self.policy_callback)
 
         # This will check the robot's current end-effector pose every 0.1 seconds
         self.tf_timer = self.create_timer(0.1, self.eef_callback)
+
+    def square_root_difference(self, values, reference):
+        return np.sqrt(np.sum(np.square(np.array(values) - np.array(reference))))
+
+    def calcualte_reward(self, pose, goal, decoy):
+        weight1 = np.array([1, 0, 0, 0, 0])
+        weight2 = np.array([1, -0.2, -0.2, -0.2, -0.2])
+        weight3 = np.array([1, 0.2, 0.2, 0.2, 0.2])
+        distance_goal = self.square_root_difference(pose, goal)
+        distance_decoy1 = self.square_root_difference(pose, decoy[0])
+        distance_decoy2 = self.square_root_difference(pose, decoy[1])
+        distance_decoy3 = self.square_root_difference(pose, decoy[2])
+        distance_decoy4 = self.square_root_difference(pose, decoy[3])
+        raw_score = np.array([distance_goal, distance_decoy1, distance_decoy2, distance_decoy3, distance_decoy4])
+        return np.array([np.exp(- np.dot(weight1, raw_score)), np.exp(- np.dot(weight2, raw_score)), np.exp(- np.dot(weight3, raw_score))])
+
 
     def eef_callback(self):
         # Look up the end-effector pose using the transform tree
@@ -47,7 +97,6 @@ class PolicyPublisher(Node):
         except TransformException as ex:
             self.get_logger().info(
                 f'Could not get transform: {ex}')
-            rclpy.time.sleep(1)
             return
 
         self.ee_pose = t.transform.translation
@@ -60,7 +109,10 @@ class PolicyPublisher(Node):
 
     def calculate_reward(self, state):
         current_reward = np.random.rand()
-        state_score = self.model.predict(state)[self.task]
+
+        #state_score = self.model.predict(state)[self.task]
+        state_score = self.calcualte_reward(state, self.goal_pose, self.decoy_pose)[self.task]
+
         for i in range(50):
             proposed_reward = self.sample_reward(current_reward)
             acceptance_probability = min(1, self.likelihood(proposed_reward, state_score) / self.likelihood(current_reward, state_score))
@@ -87,8 +139,19 @@ class PolicyPublisher(Node):
                 reward.append(r)
             index = np.argmax(reward)
             result = self.actions[index]
+            end_effector_pose = np.array([current_pose[0] + result[0], current_pose[1] + result[1], current_pose[2] + result[2]])
+
+            # Convert the end_effector_pose to joint_pose
+            # target_pose = self.convert(end_effector_pose)
+
+            # some example target_pose
+            target_pose = [-1.261259862292687, 1.0791625870230162, 1.3574703291922603, 1.7325127677684549, -1.0488170161118582, 1.4615630500372134, -1.505248122305602]
+
+            response = self.client.plan_and_execute(target_pose)
+            print(response)
 
             # Convert the action vector into a Twist message
+            '''
             twist = TwistStamped()
             twist.twist.linear.x = result[0]
             twist.twist.linear.y = result[1]
@@ -100,6 +163,8 @@ class PolicyPublisher(Node):
             twist.header.stamp = self.get_clock().now().to_msg()
 
             self.publisher_.publish(twist)
+            '''
+
 
 
 def main(args=None):
@@ -144,8 +209,11 @@ def main(args=None):
     elif number == 326:
         model_name = "326_training_sample_model.h5"
 
-    # Sample policy that will move the end-effector in a box-like shape
-    model = load_model(model_name)
+    #if we want to load model
+    #model = load_model(model_name)
+
+    #if we don't want to load model
+    model = None
 
     action_x = [-0.02, 0, 0.02]
     action_y = [-0.02, 0, 0.02]
@@ -157,7 +225,7 @@ def main(args=None):
                 actions.append([a_x, a_y, a_z])
     actions = np.array(actions)
 
-    rclpy.init(args=args)
+    rclpy.init(args=None)
 
     policy_publisher = PolicyPublisher(env, g, task, goals[env][g], decoys[env], actions, model)
 

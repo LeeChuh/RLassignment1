@@ -115,13 +115,18 @@ class PolicyPublisher(Node):
                 future_pose = current_pose + action
                 input_state = np.append(future_pose, self.goal_pose)
                 input_state = np.append(input_state, self.decoy_pose)
+
+                #using the trained model
                 #r = self.model.predict(input_state)[self.task]
+
+                #using the ground truth reward
                 future = np.array([-0.2-future_pose[1], -0.5+future_pose[0], 1.021+future_pose[2]])
                 r = self.calcualte_reward(future_pose, self.goal_pose, self.decoy_pose)[self.task]
+
                 reward.append(r)
             index = np.argmax(reward)
             result = self.actions[index]
-
+            end_effector_pose = np.array([current_pose[0] + result[0], current_pose[1] + result[1], current_pose[2] + result[2]])
             # Convert the action vector into a Twist message
             '''
             twist = TwistStamped()
@@ -134,9 +139,16 @@ class PolicyPublisher(Node):
             twist.header.frame_id = "link_base"
             twist.header.stamp = self.get_clock().now().to_msg()
             '''
+
+            # Convert the end_effector_pose to joint_pose
+            # target_pose = self.convert(end_effector_pose)
+
+            # some example target_pose
             target_pose = [-1.261259862292687, 1.0791625870230162, 1.3574703291922603, 1.7325127677684549, -1.0488170161118582, 1.4615630500372134, -1.505248122305602]
+
             response = self.client.plan_and_execute(target_pose)
             print(response)
+
             #self.publisher_.publish(twist)
 
 def main(args=None):
@@ -173,10 +185,11 @@ def main(args=None):
         model_name = "326_training_sample_model.h5"
 
 
-
-    # Sample policy that will move the end-effector in a box-like shape
+    #if we want to load model
     #model = load_model(model_name)
-    model = 1
+
+    #if we don't want to load model
+    model = None
 
     action_x = [-0.02, 0, 0.02]
     action_y = [-0.02, 0, 0.02]
