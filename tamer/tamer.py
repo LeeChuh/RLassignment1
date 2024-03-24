@@ -1,14 +1,49 @@
 import rclpy
 from rclpy.node import Node
 
+from xarm_msgs.srv import PlanJoint
+from xarm_msgs.srv import PlanExec
 from geometry_msgs.msg import TwistStamped
 from tf2_ros.transform_listener import TransformListener
 from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
-
+import random
+import sys
 #from keras.models import load_model
 import argparse
 import numpy as np
+
+
+class xarmJointPlanningClient(Node):
+
+    def __init__(self):
+        super().__init__('xarm_joint_planning_client')
+        self.plan_cli = self.create_client(PlanJoint, 'xarm_joint_plan')
+        self.exec_cli = self.create_client(PlanExec, 'xarm_exec_plan')
+         
+
+    def plan_and_execute(self,pose):
+        while not self.plan_cli.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('service not available, waiting again...')
+        self.plan_req = PlanJoint.Request()
+        self.plan_req.target = pose
+        self.plan_future = self.plan_cli.call_async(self.plan_req)
+        rclpy.spin_until_future_complete(self, self.plan_future)
+        res = self.plan_future.result()
+        if res.success:
+            self.get_logger().info('Planning success executing...')
+            while not self.exec_cli.wait_for_service(timeout_sec=1.0):
+                self.get_logger().info('service not available, waiting again...')
+            self.exec_req = PlanExec.Request()
+            self.exec_req.wait = True
+            self.exec_future = self.exec_cli.call_async(self.exec_req)
+            rclpy.spin_until_future_complete(self, self.exec_future)
+            return self.exec_future.result()
+        else:
+            self.get_logger().info('Planning Failed!')
+            return False
+
+
 
 class PolicyPublisher(Node):
 
@@ -21,13 +56,14 @@ class PolicyPublisher(Node):
         self.decoy_pose = decoy_pose
         self.actions = actions
         self.model = model
+        self.client = xarmJointPlanningClient()
 
         self.ee_pose = None
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
         # We publish end-effector commands to this topic
-        self.publisher_ = self.create_publisher(TwistStamped, '/servo_server/delta_twist_cmds', 10)
+        #self.publisher_ = self.create_publisher(TwistStamped, '/servo_server/delta_twist_cmds', 10)
 
         # This will get the next action from the policy every 0.1 seconds
         self.policy_timer = self.create_timer(0.5, self.policy_callback)
@@ -87,14 +123,21 @@ class PolicyPublisher(Node):
             result = self.actions[index]
 
             # Convert the action vector into a Twist message
+            '''
             twist = TwistStamped()
-            twist.twist.linear.x = current_pose[0] + result[0]
-            twist.twist.linear.y = current_pose[1] + result[1]
-            twist.twist.linear.z = current_pose[2] + result[2]
+            twist.twist.linear.x = 0.0 #result[0]
+            twist.twist.linear.y = 0.0 #result[1]
+            twist.twist.linear.z = 0.0 #result[2]
+            twist.twist.angular.x = 0.0 #random.uniform(-1, 1)
+            twist.twist.angular.y = 0.0 #random.uniform(-1, 1)
+            twist.twist.angular.z = 0.0 #random.uniform(-1, 1)
             twist.header.frame_id = "link_base"
             twist.header.stamp = self.get_clock().now().to_msg()
-    
-            self.publisher_.publish(twist)
+            '''
+            target_pose = [-1.261259862292687, 1.0791625870230162, 1.3574703291922603, 1.7325127677684549, -1.0488170161118582, 1.4615630500372134, -1.505248122305602]
+            response = self.client.plan_and_execute(target_pose)
+            print(response)
+            #self.publisher_.publish(twist)
 
 def main(args=None):
     env1_goal = np.array([[-0.035, 0.142, 1.245], [-0.15, 0.142, 1.245], [-0.266, 0.142, 1.245], [-0.383, 0.142, 1.245]])

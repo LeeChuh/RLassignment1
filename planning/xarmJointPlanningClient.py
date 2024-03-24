@@ -81,7 +81,7 @@ def main():
     parser.add_argument("-env", "--environment", dest = "env", default = 1, help="Environment number", type=int)
     parser.add_argument("-g", "--goal", dest = "g", default = 1, help="Goal number", type=int)
     parser.add_argument("-traj", "--trajectory",dest ="traj", default = 1, help="Trajectory number", type=int)
-    #parser.add_argument("-seg", "--segment",dest = "seg", default = 1, help="Segment", type=int)
+    parser.add_argument("-seg", "--segment",dest = "seg", default = 1, help="Segment", type=int)
 
     args = parser.parse_args()
 
@@ -118,7 +118,7 @@ def main():
 
             pose_now = [
                 trans.transform.translation.x,
-               trans.transform.translation.y,
+                trans.transform.translation.y,
                 trans.transform.translation.z,
             ]
 
