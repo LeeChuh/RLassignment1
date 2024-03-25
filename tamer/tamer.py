@@ -128,7 +128,7 @@ class PolicyPublisher(Node):
                                     action = [a * random.random(), b* random.random(), c* random.random(), d* random.random(), e* random.random(), f* random.random(), g* random.random()]
                                     pose = current_pose + action
                                     if not (min(pose) < -2 or max(pose) > 2):
-                                        future_pose.append(pose)
+                                        future_poses.append(pose)
         return future_poses
 
     def policy_callback(self):
