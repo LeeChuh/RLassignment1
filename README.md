@@ -93,7 +93,7 @@ As we can see from the evaluation, the performance of the model gets better with
 
 #### Conclusion
 
-The actual performance of the robot is shown in the recording **[screen recording](ComleteFailure.webm)**. Sadly, the robot does not perform as I wish it could, mainly because the training samples are too sparse among the space. The model overfits to the provided demonstration, and thus failed to generate reward to unseen states.
+The actual performance of the robot is shown in the recording **[screen recording](ComleteFailure.webm)**. Sadly, the robot does not perform as I wish it could, mainly because the training samples are too sparse among the state space. The model overfits to the provided demonstration, and thus failed to generate reward to unseen states.
 
 # ReadMe
 
