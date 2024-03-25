@@ -81,13 +81,13 @@ Table below is the recorded Goal and Decoy positions in different environments
 
 #### TAMER
 
-![model evaluation](tamer/comparison_plots.png)
+![model evaluation](tamer/comparison_plots_joint_space.png)
 
-As we can see from the evaluation, the performance of the model gets better with more training samples. In general, I would recommend using TAMER if we want the robot to learn new behaviors that is not shown in by the expert's demonstration.
+As we can see from the evaluation, the performance of the model gets better with more training samples. However, we can see the sign of overfitting when training with more training samples.
 
 #### BIRL
 
-![model evaluation](bayesianIRL/comparison_plots.png)
+![model evaluation](bayesianIRL/comparison_plots_joint_space.png)
 
 As we can see from the evaluation, the performance of the model gets better with more training samples. In general, I would recommend BIRL if we want the robot to simply learn what is demonstrated by the human expert, and under the situations where $P(\text{Demonstration} | \text{reward})$ is easy to calculate.
 
