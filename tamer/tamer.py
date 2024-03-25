@@ -124,7 +124,9 @@ class PolicyPublisher(Node):
                         for e in action_4:
                             for f in action_5:
                                 for g in action_6:
-                                    actions.append([a, b, c, d, e, f, g])
+                                    rand = random.random()
+                                    if rand < 0.8:
+                                        actions.append([a, b, c, d, e, f, g])
         return actions
 
     def policy_callback(self):
