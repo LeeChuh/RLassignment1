@@ -108,8 +108,7 @@ class PolicyPublisher(Node):
 
         self.ee_pose = t.transform.translation
 
-    def sample_actions(self):
-
+    def sample_actions(self, current_pose):
         action_0 = [-0.5, 0, 0.5]
         action_1 = [-0.5, 0, 0.5]
         action_2 = [-0.5, 0, 0.5]
@@ -117,7 +116,7 @@ class PolicyPublisher(Node):
         action_4 = [-1, 0, 1]
         action_5 = [-0.5, 0, 0.5]
         action_6 = [-0.5, 0, 0.5]
-        actions = []
+        future_poses = []
         for a in action_0:
             for b in action_1:
                 for c in action_2:
@@ -126,8 +125,11 @@ class PolicyPublisher(Node):
                             for f in action_5:
                                 for g in action_6:
                                     rand = random.random()
-                                    actions.append([a * random.random(), b* random.random(), c* random.random(), d* random.random(), e* random.random(), f* random.random(), g* random.random()])
-        return actions
+                                    action = [a * random.random(), b* random.random(), c* random.random(), d* random.random(), e* random.random(), f* random.random(), g* random.random()]
+                                    pose = current_pose + action
+                                    if not (min(pose) < -2 or max(pose) > 2):
+                                        future_pose.append(pose)
+        return future_poses
 
     def policy_callback(self):
         if self.ee_pose is None:
@@ -142,10 +144,9 @@ class PolicyPublisher(Node):
         if distance > 0.05:
             reward = []
             current_joint = self.joint_pose
-            actions = self.sample_actions()
+            future_poses = self.sample_actions(current_joint)
             input_states = []
-            for action in actions:
-                future_pose = current_joint + action
+            for future_pose in future_poses:
                 input_state = np.append(future_pose, self.goal_pose)
                 input_state = np.append(input_state, self.decoy_pose)
 
@@ -160,8 +161,7 @@ class PolicyPublisher(Node):
 
             #reward.append(r)
             index = np.argmax(reward)
-            result = actions[index]
-            target_pose = [current_joint[0] + result[0], current_joint[1] + result[1],current_joint[2] + result[2],current_joint[3] + result[3],current_joint[4] + result[4],current_joint[5] + result[5],current_joint[6] + result[6]]
+            result = future_poses[index]
             # Convert the action vector into a Twist message
             '''
             twist = TwistStamped()
@@ -180,7 +180,7 @@ class PolicyPublisher(Node):
 
             # some example target_pose
             #target_pose = [-1.261259862292687, 1.0791625870230162, 1.3574703291922603, 1.7325127677684549, -1.0488170161118582, 1.4615630500372134, -1.505248122305602]
-            response = self.client.plan_and_execute(target_pose)
+            response = self.client.plan_and_execute(result)
             print(response)
             '''
             if response:
