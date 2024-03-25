@@ -135,7 +135,7 @@ class PolicyPublisher(Node):
                 #using the trained model
                 input_states.append(input_state)
             input_states = np.array(input_states)
-            reward = self.model.predict(input_states.T)[self.task]
+            reward = self.model.predict(input_states)[self.task]
 
             #using the ground truth reward
             #future = np.array([-0.2-future_pose[1], -0.5+future_pose[0], 1.021+future_pose[2]])
