@@ -2,6 +2,17 @@
 
 ## This github repo is for CPSC 589 Spring '24 HW1
 
+### Collaborators
+
+Ziyao Shangguan
+
+Chuhan Li
+
+Anushka Potdar
+
+
+
+
 ### Behaviors to learn
 
 1. Go directly to the Goal
