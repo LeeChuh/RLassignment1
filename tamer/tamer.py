@@ -180,7 +180,7 @@ class PolicyPublisher(Node):
 
             # some example target_pose
             #target_pose = [-1.261259862292687, 1.0791625870230162, 1.3574703291922603, 1.7325127677684549, -1.0488170161118582, 1.4615630500372134, -1.505248122305602]
-            response = self.client.plan_and_execute(result)
+            response = self.client.plan_and_execute([result[0], result[1], result[2], result[3], result[4], result[5], result[6]])
             print(response)
             '''
             if response:
