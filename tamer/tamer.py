@@ -110,13 +110,13 @@ class PolicyPublisher(Node):
 
     def sample_actions(self):
 
-        action_0 = [-1, 0, 1]
-        action_1 = [-1, 0, 1]
-        action_2 = [-1, 0, 1]
-        action_3 = [-1, 0, 1]
-        action_4 = [-1, 0, 1]
-        action_5 = [-1, 0, 1]
-        action_6 = [-1, 0, 1]
+        action_0 = [-0.5, 0, 0.5]
+        action_1 = [-0.5, 0, 0.5]
+        action_2 = [-0.5, 0, 0.5]
+        action_3 = [-0.5, 0, 0.5]
+        action_4 = [-0.5, 0, 0.5]
+        action_5 = [-0.5, 0, 0.5]
+        action_6 = [-0.5, 0, 0.5]
         actions = []
         for a in action_0:
             for b in action_1:
