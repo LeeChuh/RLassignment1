@@ -28,6 +28,7 @@ class xarmJointPlanningClient(Node):
             self.get_logger().info('service not available, waiting again...')
         self.plan_req = PlanJoint.Request()
         self.plan_req.target = pose
+        print(pose)
         self.plan_future = self.plan_cli.call_async(self.plan_req)
         rclpy.spin_until_future_complete(self, self.plan_future)
         res = self.plan_future.result()
