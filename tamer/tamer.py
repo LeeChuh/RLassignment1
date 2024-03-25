@@ -66,8 +66,6 @@ class PolicyPublisher(Node):
         self.tf_listener = TransformListener(self.tf_buffer, self)
         self.subscription = self.create_subscription(JointState, '/joint_states', self.joint_callback, 10)
 
-        # We publish end-effector commands to this topic
-        #self.publisher_ = self.create_publisher(TwistStamped, '/servo_server/delta_twist_cmds', 10)
 
         # This will get the next action from the policy every 0.1 seconds
         self.policy_timer = self.create_timer(0.5, self.policy_callback)
@@ -78,21 +76,6 @@ class PolicyPublisher(Node):
     def joint_callback(self, msg):
         joint_pose = [msg.position[4], msg.position[0], msg.position[1], msg.position[5], msg.position[2], msg.position[3], msg.position[6]]
         self.joint_pose = np.array(joint_pose)
-
-    def square_root_difference(self, values, reference):
-        return np.sqrt(np.sum(np.square(np.array(values) - np.array(reference))))
-
-    def calcualte_reward(self, pose, goal, decoy):
-        weight1 = np.array([1, 0, 0, 0, 0])
-        weight2 = np.array([1, -0.2, -0.2, -0.2, -0.2])
-        weight3 = np.array([1, 0.2, 0.2, 0.2, 0.2])
-        distance_goal = self.square_root_difference(pose, goal)
-        distance_decoy1 = self.square_root_difference(pose, decoy[0])
-        distance_decoy2 = self.square_root_difference(pose, decoy[1])
-        distance_decoy3 = self.square_root_difference(pose, decoy[2])
-        distance_decoy4 = self.square_root_difference(pose, decoy[3])
-        raw_score = np.array([distance_goal, distance_decoy1, distance_decoy2, distance_decoy3, distance_decoy4])
-        return np.array([np.exp(- np.dot(weight1, raw_score)), np.exp(- np.dot(weight2, raw_score)), np.exp(- np.dot(weight3, raw_score))])
 
     def eef_callback(self):
         # Look up the end-effector pose using the transform tree
@@ -120,10 +103,9 @@ class PolicyPublisher(Node):
                                 for g in action_j:
                                     rand = random.random()
                                     action = [a,b,c,d,e,f,g]
-                                    #action = [a*random.random(), b*random.random(), c*random.random(), d*random.random(), e*random.random(), f*random.random(), g*random.random()]
                                     pose = current_pose + action
-                                    if not (min(pose) < -2 or max(pose) > 2):
-                                        if rand < 0.8:
+                                    if not (min(pose) < -2 or max(pose) > 2): #constraint on joint movement
+                                        if rand < 0.8: #randomly sample 80% of possible actions to avoid local minimum
                                             future_poses.append(pose)
         return future_poses
 
@@ -151,31 +133,9 @@ class PolicyPublisher(Node):
             input_states = np.array(input_states)
             reward = self.model.predict(input_states)[self.task]
 
-            #using the ground truth reward
-            #future = np.array([-0.2-future_pose[1], -0.5+future_pose[0], 1.021+future_pose[2]])
-            #r = self.calcualte_reward(future_pose, self.goal_pose, self.decoy_pose)[self.task]
-
-            #reward.append(r)
             index = np.argmax(reward)
             result = future_poses[index]
-            # Convert the action vector into a Twist message
-            '''
-            twist = TwistStamped()
-            twist.twist.linear.x = 0.0 #result[0]
-            twist.twist.linear.y = 0.0 #result[1]
-            twist.twist.linear.z = 0.0 #result[2]
-            twist.twist.angular.x = 0.0 #random.uniform(-1, 1)
-            twist.twist.angular.y = 0.0 #random.uniform(-1, 1)
-            twist.twist.angular.z = 0.0 #random.uniform(-1, 1)
-            twist.header.frame_id = "link_base"
-            twist.header.stamp = self.get_clock().now().to_msg()
-            '''
 
-            # Convert the end_effector_pose to joint_pose
-            # target_pose = self.convert(end_effector_pose)
-
-            # some example target_pose
-            #target_pose = [-1.261259862292687, 1.0791625870230162, 1.3574703291922603, 1.7325127677684549, -1.0488170161118582, 1.4615630500372134, -1.505248122305602]
             target_pose = [result[0], result[1], result[2], result[3], result[4], result[5], result[6]]
             response = self.client.plan_and_execute(target_pose)
             print(response)
@@ -186,7 +146,6 @@ class PolicyPublisher(Node):
             if not response:
                 self.client.plan_and_execute(self.preprev)
 
-            #self.publisher_.publish(twist)
 
 def main(args=None):
     env1_goal = np.array([[-0.035, 0.142, 1.245], [-0.15, 0.142, 1.245], [-0.266, 0.142, 1.245], [-0.383, 0.142, 1.245]])
@@ -221,12 +180,7 @@ def main(args=None):
     elif number == 326:
         model_name = "326_training_sample_model_joint_space.h5"
 
-
-    #if we want to load model
     model = load_model(model_name)
-
-    #if we don't want to load model
-    #model = None
 
 
     rclpy.init(args=None)
