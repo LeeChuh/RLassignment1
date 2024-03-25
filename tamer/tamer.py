@@ -4,12 +4,13 @@ from rclpy.node import Node
 from xarm_msgs.srv import PlanJoint
 from xarm_msgs.srv import PlanExec
 from geometry_msgs.msg import TwistStamped
+from sensor_msgs.msg import JointState
 from tf2_ros.transform_listener import TransformListener
 from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
 import random
 import sys
-#from keras.models import load_model
+from keras.models import load_model
 import argparse
 import numpy as np
 
@@ -47,20 +48,21 @@ class xarmJointPlanningClient(Node):
 
 class PolicyPublisher(Node):
 
-    def __init__(self, env, goal, task, goal_pose, decoy_pose, actions, model):
+    def __init__(self, env, goal, task, goal_pose, decoy_pose, model):
         super().__init__('policy_publisher')
         self.env = env
         self.goal = goal
         self.task = task
         self.goal_pose = goal_pose
         self.decoy_pose = decoy_pose
-        self.actions = actions
         self.model = model
         self.client = xarmJointPlanningClient()
+        self.joint_pose = None
 
         self.ee_pose = None
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
+        self.subscription = self.create_subscription(JointState, '/joint_states', self.joint_callback, 10)
 
         # We publish end-effector commands to this topic
         #self.publisher_ = self.create_publisher(TwistStamped, '/servo_server/delta_twist_cmds', 10)
@@ -71,6 +73,9 @@ class PolicyPublisher(Node):
         # This will check the robot's current end-effector pose every 0.1 seconds
         self.tf_timer = self.create_timer(0.1, self.eef_callback)
 
+    def joint_callback(self, msg):
+        joint_pose = [msg.position[4], msg.position[0], msg.position[1], msg.position[5], msg.position[2], msg.position[3], msg.position[6]]
+        self.joint_pose = np.array(joint_pose)
 
     def square_root_difference(self, values, reference):
         return np.sqrt(np.sum(np.square(np.array(values) - np.array(reference))))
@@ -101,32 +106,44 @@ class PolicyPublisher(Node):
 
         self.ee_pose = t.transform.translation
 
+    def sample_actions(self, number):
+        actions = []
+        for i in range(number):
+            actions.append([random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1)])
+        return actions
 
     def policy_callback(self):
         if self.ee_pose is None:
             print("Waiting for ee pose...")
+            return
+        if self.joint_pose is None:
+            print("Waiting for joint pose...")
             return
         current_pose = np.array([self.ee_pose.x, self.ee_pose.y, self.ee_pose.z])
         pose_in_world = np.array([-0.2 - current_pose[1], -0.5 + current_pose[0], 1.021 + current_pose[2]])
         distance = np.sqrt(np.sum((pose_in_world - self.goal_pose) ** 2))
         if distance > 0.05:
             reward = []
-            for action in self.actions:
-                future_pose = current_pose + action
+            current_joint = self.joint_pose
+            actions = self.sample_actions(50)
+            input_states = []
+            for action in actions:
+                future_pose = current_joint + action
                 input_state = np.append(future_pose, self.goal_pose)
                 input_state = np.append(input_state, self.decoy_pose)
 
                 #using the trained model
-                #r = self.model.predict(input_state)[self.task]
+                input_states.append(input_state)
+            reward = self.model.predict(input_state)[self.task]
 
-                #using the ground truth reward
-                future = np.array([-0.2-future_pose[1], -0.5+future_pose[0], 1.021+future_pose[2]])
-                r = self.calcualte_reward(future_pose, self.goal_pose, self.decoy_pose)[self.task]
+            #using the ground truth reward
+            #future = np.array([-0.2-future_pose[1], -0.5+future_pose[0], 1.021+future_pose[2]])
+            #r = self.calcualte_reward(future_pose, self.goal_pose, self.decoy_pose)[self.task]
 
-                reward.append(r)
+            #reward.append(r)
             index = np.argmax(reward)
-            result = self.actions[index]
-            end_effector_pose = np.array([current_pose[0] + result[0], current_pose[1] + result[1], current_pose[2] + result[2]])
+            result = actions[index]
+            target_pose = current_joint + result
             # Convert the action vector into a Twist message
             '''
             twist = TwistStamped()
@@ -144,8 +161,7 @@ class PolicyPublisher(Node):
             # target_pose = self.convert(end_effector_pose)
 
             # some example target_pose
-            target_pose = [-1.261259862292687, 1.0791625870230162, 1.3574703291922603, 1.7325127677684549, -1.0488170161118582, 1.4615630500372134, -1.505248122305602]
-
+            #target_pose = [-1.261259862292687, 1.0791625870230162, 1.3574703291922603, 1.7325127677684549, -1.0488170161118582, 1.4615630500372134, -1.505248122305602]
             response = self.client.plan_and_execute(target_pose)
             print(response)
 
@@ -175,35 +191,26 @@ def main(args=None):
     task = args.task - 1 # 1~3
     number = args.number
 
-    model_name = "435_training_sample_model.h5"
+    model_name = "435_training_sample_model_joint_space.h5"
 
     if number == 108:
-        model_name = "108_training_sample_model.h5"
+        model_name = "108_training_sample_model_joint_space.h5"
     elif number == 217:
-        model_name = "217_training_sample_model.h5"
+        model_name = "217_training_sample_model_joint_space.h5"
     elif number == 326:
-        model_name = "326_training_sample_model.h5"
+        model_name = "326_training_sample_model_joint_space.h5"
 
 
     #if we want to load model
-    #model = load_model(model_name)
+    model = load_model(model_name)
 
     #if we don't want to load model
-    model = None
+    #model = None
 
-    action_x = [-0.02, 0, 0.02]
-    action_y = [-0.02, 0, 0.02]
-    action_z = [-0.02, 0, 0.02]
-    actions = []
-    for a_x in action_x:
-        for a_y in action_y:
-            for a_z in action_z:
-                actions.append([a_x, a_y, a_z])
-    actions = np.array(actions)
 
     rclpy.init(args=None)
 
-    policy_publisher = PolicyPublisher(env, g, task, goals[env][g], decoys[env], actions, model)
+    policy_publisher = PolicyPublisher(env, g, task, goals[env][g], decoys[env], model)
 
     rclpy.spin(policy_publisher)
 
