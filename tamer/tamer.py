@@ -109,13 +109,13 @@ class PolicyPublisher(Node):
 
     def sample_actions(self):
 
-        action_0 = [-0.3, 0, 0.3]
-        action_1 = [-0.3, 0, 0.3]
-        action_2 = [-0.3, 0, 0.3]
-        action_3 = [-0.3, 0, 0.3]
-        action_4 = [-0.3, 0, 0.3]
-        action_5 = [-0.3, 0, 0.3]
-        action_6 = [-0.3, 0, 0.3]
+        action_0 = [-1, 0, 1]
+        action_1 = [-1, 0, 1]
+        action_2 = [-1, 0, 1]
+        action_3 = [-1, 0, 1]
+        action_4 = [-1, 0, 1]
+        action_5 = [-1, 0, 1]
+        action_6 = [-1, 0, 1]
         actions = []
         for a in action_0:
             for b in action_1:
@@ -125,8 +125,7 @@ class PolicyPublisher(Node):
                             for f in action_5:
                                 for g in action_6:
                                     rand = random.random()
-                                    if rand < 0.8:
-                                        actions.append([a * random.random(), b* random.random(), c* random.random(), d* random.random(), e* random.random(), f* random.random(), g* random.random()])
+                                    actions.append([a * random.random(), b* random.random(), c* random.random(), d* random.random(), e* random.random(), f* random.random(), g* random.random()])
         return actions
 
     def policy_callback(self):
