@@ -60,6 +60,7 @@ class PolicyPublisher(Node):
         self.client = xarmJointPlanningClient()
         self.joint_pose = None
         self.prev = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        self.preprev = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
         self.ee_pose = None
         self.tf_buffer = Buffer()
@@ -125,7 +126,7 @@ class PolicyPublisher(Node):
                             for f in action_5:
                                 for g in action_6:
                                     rand = random.random()
-                                    action = [a * random.random(), b* random.random(), c* random.random(), d* random.random(), e* random.random(), f* random.random(), g* random.random()]
+                                    action = [a, b, c, d, e, f, g]
                                     pose = current_pose + action
                                     if not (min(pose) < -2 or max(pose) > 2):
                                         future_poses.append(pose)
@@ -182,12 +183,11 @@ class PolicyPublisher(Node):
             #target_pose = [-1.261259862292687, 1.0791625870230162, 1.3574703291922603, 1.7325127677684549, -1.0488170161118582, 1.4615630500372134, -1.505248122305602]
             response = self.client.plan_and_execute([result[0], result[1], result[2], result[3], result[4], result[5], result[6]])
             print(response)
-            '''
             if response:
-                self.prev = target_pose
+                self.preprev = self.prev
+                self.prev = [result[0], result[1], result[2], result[3], result[4], result[5], result[6]]
             if not response:
-                self.client.plan_and_execute(self.prev)
-            '''
+                self.client.plan_and_execute(self.preprev)
 
             #self.publisher_.publish(twist)
 
