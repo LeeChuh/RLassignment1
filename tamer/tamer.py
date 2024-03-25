@@ -59,6 +59,7 @@ class PolicyPublisher(Node):
         self.model = model
         self.client = xarmJointPlanningClient()
         self.joint_pose = None
+        self.prev = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
         self.ee_pose = None
         self.tf_buffer = Buffer()
@@ -181,8 +182,10 @@ class PolicyPublisher(Node):
             #target_pose = [-1.261259862292687, 1.0791625870230162, 1.3574703291922603, 1.7325127677684549, -1.0488170161118582, 1.4615630500372134, -1.505248122305602]
             response = self.client.plan_and_execute(target_pose)
             print(response)
+            if response:
+                self.prev = target_pose
             if not response:
-                self.client.plan_and_execute([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+                self.client.plan_and_execute(self.prev)
 
             #self.publisher_.publish(twist)
 
