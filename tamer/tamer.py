@@ -107,10 +107,24 @@ class PolicyPublisher(Node):
 
         self.ee_pose = t.transform.translation
 
-    def sample_actions(self, number):
+    def sample_actions(self):
+
+        action_0 = [-0.1, 0, 0.1]
+        action_1 = [-0.1, 0, 0.1]
+        action_2 = [-0.1, 0, 0.1]
+        action_3 = [-0.1, 0, 0.1]
+        action_4 = [-0.1, 0, 0.1]
+        action_5 = [-0.1, 0, 0.1]
+        action_6 = [-0.1, 0, 0.1]
         actions = []
-        for i in range(number):
-            actions.append([random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1)])
+        for a in action_0:
+            for b in action_1:
+                for c in action_2:
+                    for d in action_3:
+                        for e in action_4:
+                            for f in action_5:
+                                for g in action_6:
+                                    actions.append([a, b, c, d, e, f, g])
         return actions
 
     def policy_callback(self):
@@ -126,7 +140,7 @@ class PolicyPublisher(Node):
         if distance > 0.05:
             reward = []
             current_joint = self.joint_pose
-            actions = self.sample_actions(2000)
+            actions = self.sample_actions()
             input_states = []
             for action in actions:
                 future_pose = current_joint + action
