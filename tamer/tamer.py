@@ -126,7 +126,7 @@ class PolicyPublisher(Node):
         if distance > 0.05:
             reward = []
             current_joint = self.joint_pose
-            actions = self.sample_actions(50)
+            actions = self.sample_actions(2000)
             input_states = []
             for action in actions:
                 future_pose = current_joint + action
