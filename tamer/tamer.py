@@ -146,7 +146,7 @@ class PolicyPublisher(Node):
             index = np.argmax(reward)
             result = actions[index]
             target_pose = current_joint + result
-            print(target_pose)
+            print(type(target_pose[0]))
             # Convert the action vector into a Twist message
             '''
             twist = TwistStamped()
