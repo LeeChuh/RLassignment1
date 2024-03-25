@@ -28,7 +28,6 @@ class xarmJointPlanningClient(Node):
             self.get_logger().info('service not available, waiting again...')
         self.plan_req = PlanJoint.Request()
         self.plan_req.target = pose
-        print(pose)
         self.plan_future = self.plan_cli.call_async(self.plan_req)
         rclpy.spin_until_future_complete(self, self.plan_future)
         res = self.plan_future.result()
@@ -110,26 +109,22 @@ class PolicyPublisher(Node):
         self.ee_pose = t.transform.translation
 
     def sample_actions(self, current_pose):
-        action_0 = [-0.5, 0, 0.5]
-        action_1 = [-0.5, 0, 0.5]
-        action_2 = [-0.5, 0, 0.5]
-        action_3 = [-0.5, 0, 0.5]
-        action_4 = [-1, 0, 1]
-        action_5 = [-0.5, 0, 0.5]
-        action_6 = [-0.5, 0, 0.5]
+        action_j = [-0.1, 0, 0.1]
         future_poses = []
-        for a in action_0:
-            for b in action_1:
-                for c in action_2:
-                    for d in action_3:
-                        for e in action_4:
-                            for f in action_5:
-                                for g in action_6:
+        for a in action_j:
+            for b in action_j:
+                for c in action_j:
+                    for d in action_j:
+                        for e in action_j:
+                            for f in action_j:
+                                for g in action_j:
                                     rand = random.random()
-                                    action = [a, b, c, d, e, f, g]
+                                    action = [a,b,c,d,e,f,g]
+                                    #action = [a*random.random(), b*random.random(), c*random.random(), d*random.random(), e*random.random(), f*random.random(), g*random.random()]
                                     pose = current_pose + action
                                     if not (min(pose) < -2 or max(pose) > 2):
-                                        future_poses.append(pose)
+                                        if rand < 0.8:
+                                            future_poses.append(pose)
         return future_poses
 
     def policy_callback(self):
@@ -181,11 +176,13 @@ class PolicyPublisher(Node):
 
             # some example target_pose
             #target_pose = [-1.261259862292687, 1.0791625870230162, 1.3574703291922603, 1.7325127677684549, -1.0488170161118582, 1.4615630500372134, -1.505248122305602]
-            response = self.client.plan_and_execute([result[0], result[1], result[2], result[3], result[4], result[5], result[6]])
+            target_pose = [result[0], result[1], result[2], result[3], result[4], result[5], result[6]]
+            response = self.client.plan_and_execute(target_pose)
             print(response)
+            print(target_pose)
             if response:
                 self.preprev = self.prev
-                self.prev = [result[0], result[1], result[2], result[3], result[4], result[5], result[6]]
+                self.prev = target_pose
             if not response:
                 self.client.plan_and_execute(self.preprev)
 
