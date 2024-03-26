@@ -1,5 +1,12 @@
 # Robot Learning Assignment 1 Report
 
+## 0. Behaviors to Learn
+By watching the demonstration video, we summarize the possible behaviors into 3 settings:
+
+1. Go directly to the Goal, we define the reward function as $e^{-\sqrt{(G - E)^2}}$, the closer the end effector to the goal, the higher the reward.
+2. Go to the Goal but avoid the Decoys, we define the reward function as $e^{-(\sqrt{(G - E)^2} - 0.2 \sum_i \sqrt{(D_i - E)^2})}$, the further the end effector to the Decoy, the higher the reward value.
+3. Go to the Goal but is attracted to the Decoys, we define the reward function as $e^{-(\sqrt{(G - E)^2} + 0.2 \sum_i \sqrt{(D_i - E)^2})}$, the closer the end effector to the Decoy, the higher the reward value.
+
 ## 1. Collaborators
 
 - Eason Ding (This repo is forked from Eason)
@@ -7,12 +14,6 @@
 - Ziyao Shangguan
 
 - Anushka Potdar
-
-## Behaviors to learn
-
-1. Go directly to the Goal, we define the reward function as $e^{-\sqrt{(G - E)^2}}$, the closer the end effector to the goal, the higher the reward.
-2. Go to the Goal but avoid the Decoys, we define the reward function as $e^{-(\sqrt{(G - E)^2} - 0.2 \sum_i \sqrt{(D_i - E)^2})}$, the further the end effector to the Decoy, the higher the reward value.
-3. Go to the Goal but is attracted to the Decoys, we define the reward function as $e^{-(\sqrt{(G - E)^2} + 0.2 \sum_i \sqrt{(D_i - E)^2})}$, the closer the end effector to the Decoy, the higher the reward value.
 
 ## 2. Algoithm picked
 
