@@ -1,6 +1,6 @@
 # Robot Learning Assignment 1 Report
 
-## Collaborators
+## 1. Collaborators
 
 - Eason Ding (This repo is forked from Eason)
 
@@ -11,77 +11,46 @@
 ## Behaviors to learn
 
 1. Go directly to the Goal, we define the reward function as $e^{-\sqrt{(G - E)^2}}$, the closer the end effector to the goal, the higher the reward.
-2. Go to the Goal but is attracted to the Decoys, we define the reward function as $e^{-(\sqrt{(G - E)^2} - 0.2 \sum_i \sqrt{(D_i - E)^2})}$, the closer the end effector to the Decoy, the higher the reward value.
-3. Go to the Goal but avoid to the Decoys
+2. Go to the Goal but avoid the Decoys, we define the reward function as $e^{-(\sqrt{(G - E)^2} - 0.2 \sum_i \sqrt{(D_i - E)^2})}$, the further the end effector to the Decoy, the higher the reward value.
+3. Go to the Goal but is attracted to the Decoys, we define the reward function as $e^{-(\sqrt{(G - E)^2} + 0.2 \sum_i \sqrt{(D_i - E)^2})}$, the closer the end effector to the Decoy, the higher the reward value.
 
-### Algoithm picked
+## 2. Algoithm picked
 
-#### [TAMER](https://www.researchgate.net/publication/220916820_Interactively_shaping_agents_via_human_reinforcement_the_TAMER_framework) framework
+In summary, we picked __TAMER__ and __Bayesian IRL__ in this assignment.
 
-![pseudocode_RL](tamer/pseudocode_TAMER.png)
+Both TAMER and Bayesian IRL are trying to learn human teacher's reward value. 
+- TAMER uses a supervised learning setting to learn human reward explicity.
+- Bayesian IRL uses Bayes rule to learn the reward distribution.
 
-Tamer aims to predict human reward given the oneline human feedback, then using the reward to guide the robot's behavior. For this assignment, I would use MLP to replace the ReinModel provided in the pseudocode. Further, since we already have demonstration data, I will seperate the training and executing process. In other words, I will first do an offline training on human rewards for given demonstrations, then using the trained model to guide robot's behavior.
+### 2.1 TAMER Framework
+TAMER originally aims to predict reward function from human demonstration in an online learning setting. However, given that we have the demonstration and for simplicity, we learn the reward function in an offline learning setting. Given the three behaviors mentioned above and the trajectory of the robot, we calculate reward for each task and treat them as the ground truth value for the reward model. Then, we apply a multi-layer perceptron (MLP) to actively learn the r`eward function`. 
 
-#### [Bayesian IRL](https://www.researchgate.net/publication/220815343_Bayesian_Inverse_Reinforcement_Learning) 
+Once we have the `reward function`, given the current joint angle, we can calculate the reward value for the current joint angle. The next question is how can we determine the angle movement given the current reward. For simplicity, we apply the brute force searching, i.e., we iterate all possible combination of each joint and calcualte the reward value for each combination, we return the joint angle with the highest reward value. 
 
-![pseudocode_IRL](bayesianIRL/Pseudocode_BayesianIRL.png)
+### 2.2 Bayesian IRL
+Bayesian IRL aims to learn the probability distribution over the space of reward functions in an IRL setting. In Bayesian IRL, we aim to learn $P(Reward|Demonstration)$. We use a maximum a posterior for estimating this objective, i.e., $P(Reward|Demonstration) \propto P(Demonstration|Reward) \cdot P(Reward)$. In this assignment, we assume $P(Reward)$ is in uniform distribution. Then, we only need to estimate $P(Demonstration|Reward)$. In this assignment, we use the original task as our main estimator, i.e., $P(Demonstration|Reward) = e^{-(\hat{R} - \tilde{R})^2}$ where $\hat{R}$ is the reward that we want to learn and $\tilde{R}$ is the reward that we have. Similar to TAMER, we will use a multi-layer perceptron (MLP) to estimate the ground truth reward $\hat{R}$.
 
-Bayesian IRL aims to generate a probability distribution over the sapce of reward functions using Inverse Reinforcement Learning. In other words, this method focuses on inferring $P(reward | Demonstration)$. However, BIRL assumes that the expert has the attention to maximize the reward function of the given behavior, and since the provided demonstrations do not explicitly exhibit behaviors such as object avoiding, I will slightly modify the BIRL to make it suitable for my task. First, I assume $P(reward)$ and $P(D)$ is uniform, so that I only need to calculate $P(Demonstration | reward)$. Second, since I've already assigned human reward for all the demonstrations from previous task, I can approximate $P(Demonstration| reward)$ by using the expert reward (the ground truth $\hat{R}$) and the proposed reward ($\tilde{R}$). In my case, $P(Demonstration| reward) = e^{-(\hat{R} - \tilde{R})^2}$. Since the expert reward only covers states that is in the demonstration, I would need to train an MLP that could generate expert reward for all the states. Lastly, the robot will need to do online approximation of $\hat{R}$ using $\tilde{R}$, and use $\tilde{R}$ to guide its behavior.
+## 3. Why Choose TAMER and Bayesian IRL
+We choose these two algorithms since these two are the foundation of the current IRL and LfD algorithms. Also, compared to other algorithms, these two algorithms are relatively straightforward, easy to understand, and easy to implement. For novice people like me in ROS, we find that these two algorithms are easy enough to understand and implement in the ROS setting. 
 
-#### Comparison
+Also, we want to compare the performance of RL and IRL in general.
 
-Both TAMER and BIRL are trying to approximate expert's reward for state-action pairs. However, BIRL focuses on the exact reward given by the expert, while BIRL focuses on inferring unknown reward from demonstration in a probabilistic way.
+## 4. Hypothesis
 
-I choose these two algorithms because I want to compare the performance of RL and IRL in general.
+We believe TAMER will work better compared to Bayesian IRL, since we use pre-defined reward value to train an offline reward model. One major blocker for Bayesian IRL is the distribution of the reward value. Since we do not explore all possbile distributions, our hypothesis is ``simply use MLP to learn human reward is more effective``.
 
-For this specific assignment, I believe TAMER will have better performance, since TAMER only cares about human reward to different states and does not rely on expert's demonstration. In comparison, BIRL has the assumption that the expert demonstration tries to maximize the unknown reward function, which is not suitable for this task where I want to train the robot to learn new behaviors that's not demonstrated by the expert.
+## 5. Modification of the Demonstration Data
 
-### Feedback to the trajectories
+As we mentioned before, based on the joint angle, we calculate the reward value for each position as follows:
+  - Go directly to the Goal, we define the reward function as $e^{-\sqrt{(G - E)^2}}$, the closer the end effector to the goal, the higher the reward.
+  - Go to the Goal but avoid the Decoys, we define the reward function as $e^{-(\sqrt{(G - E)^2} - 0.2 \sum_i \sqrt{(D_i - E)^2})}$, the further the end effector to the Decoy, the higher the reward value.
+  - Go to the Goal but is attracted to the Decoys, we define the reward function as $e^{-(\sqrt{(G - E)^2} + 0.2 \sum_i \sqrt{(D_i - E)^2})}$, the closer the end effector to the Decoy, the higher the reward value.
 
-First, I convert the joint-space poses to end-effector poses, and record it as [here](eefPlanning).
+The other thing we modify slightly is the relative coordinates of robot's base and the world. Experimentally, we observed that robot's base position w.r.t. the world is  $[-0.2, -0.5, 1.021]$, in other words, end-effector position with respect to the world is: $[-0.2 - \text{end-effector pos wrt robot base}.y, -0.5 + \text{end-effector pos wrt robot base}.x, 1.021 + \text{end-effector pos wrt robot base}.z]$.
 
-Then, Let $G$ be the goal position, $E$ be the end-deffector position, and $D_i$ be the $i$ th decoy position, I assign reward to different states for different behaviors as follow:
+## 6. Training Graph
 
-1. Behavior 1: $e^{-\sqrt{(G - E)^2}}$
-2. Behavior 2: $e^{-(\sqrt{(G - E)^2} - 0.2 \sum_i \sqrt{(D_i - E)^2})}$
-3. Behavior 3: $e^{-(\sqrt{(G - E)^2} + 0.2 \sum_i \sqrt{(D_i - E)^2})}$
 
-This reward make sense since it grows as the end-effector approaches the goal or attractors, and it decreases when the end-effector approaches the obstacles.
-
-However, there's one problem: the recorded end-effector position is with respect to the robot's base, and the recorded Goal and Deocy position is with respect to the world.
-
-Thus, using Gazebo, I figured out Robot's base position with respect to the World is: $[-0.2, -0.5, 1.021]$
-
-And by applying transforms, end-effector position with respect to the world is: $[-0.2 - \text{end-effector pos wrt robot base}.y, -0.5 + \text{end-effector pos wrt robot base}.x, 1.021 + \text{end-effector pos wrt robot base}.z]$
-
-Table below is the recorded Goal and Decoy positions in different environments
-
-|Env, Goal, Decoy| pos.x w.r.t the world | pos.y       | pos.z      |
-|:--------------:|:---------------------:|:-----------:|:----------:|
-|Env 1, Goal 1   |-0.035		 |0.142        |1.245	    |
-|Env 1, Goal 2   |-0.15			 |0.142	       |1.245       |
-|Env 1, Goal 3   |-0.266		 |0.142	       |1.245       |
-|Env 1, Goal 4   |-0.383		 |0.142        |1.245	    |
-|Env 1, Decoy 1  |-0.383379              |0.165331     |1.14576     |
-|Env 1, Decoy 2  |-0.183635		 |0.239076     |1.31077     |
-|Env 1, Decoy 3  |-0.153111              |0.110957     |1.29395     |
-|Env 1, Decoy 4  |0.022497	  	 |0.180345     |1.1708      |
-|Env 2, Goal 1   |-0.035		 |0.042        |1.345	    |
-|Env 2, Goal 2   |-0.15			 |0.042	       |1.245       |
-|Env 2, Goal 3   |-0.266		 |0.142	       |1.345       |
-|Env 2, Goal 4   |-0.383		 |0.042        |1.245	    |
-|Env 2, Decoy 1  |-0.416498              |0.078665     |1.32583     |
-|Env 2, Decoy 2  |-0.196313		 |0.310306     |1.34149     |
-|Env 2, Decoy 3  |-0.133594              |0.184351     |1.34316     |
-|Env 2, Decoy 4  |-0.074792	  	 |0.148929     |1.43017     |
-|Env 3, Goal 1   |-0.035		 |0.042        |1.145	    |
-|Env 3, Goal 2   |-0.15			 |0.142	       |1.245       |
-|Env 3, Goal 3   |-0.266		 |0.142	       |1.245       |
-|Env 3, Goal 4   |-0.383		 |0.042        |1.145	    |
-|Env 3, Decoy 1  |-0.344683              |0.024459     |1.20518     |
-|Env 3, Decoy 2  |-0.16924		 |0.226221     |1.2826      |
-|Env 3, Decoy 3  |-0.099357              |0.12819      |1.32999     |
-|Env 3, Decoy 4  |-0.024455	  	 |0.073603     |1.2148      |
 
 ### Training and Testing result
 
