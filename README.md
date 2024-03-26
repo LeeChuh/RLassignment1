@@ -71,7 +71,7 @@ Our recording is here **[screen recording](ComleteFailure.webm)**. However, the 
 # README
 
 * The **[assign_reward](assign_reward)** folder contains the code to assign reward to end-effector trajectories. The assigned rewards are saved inside the **[reward](reward)** folder.
-* The **[bayesianIRL](bayesianIRL)** folder contains 4 models that trained with different training size (108, 217, 326, 435 samples). Each model takes in 22 numbers as input, and output 3 numbers that correspond to the rewards calculated for 3 different behaviors. **[bayesianIRL.py](bayesianIRL/bayesianIRL.py)** is Bayesian IRL.
+* The **[bayesianIRL](bayesianIRL)** folder contains 4 models that trained with different training size (108, 217, 326, 435 samples). Each model takes in 22 (7-d joint position + 3-d Goal position + 4 $\times$ 3-d Decoy position) numbers as input, and output 3 numbers that correspond to the rewards calculated for 3 different behaviors. **[bayesianIRL.py](bayesianIRL/bayesianIRL.py)** is Bayesian IRL.
 * **[display.py](bayesianIRL/display.py)** contains the code to display the training and testing evaluation.
 * **[train.py](bayesianIRL/train.py)** contains the code that trains the model.
 * The **[config](config)** is the simulation model.
