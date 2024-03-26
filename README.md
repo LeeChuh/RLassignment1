@@ -50,33 +50,35 @@ The other thing we modify slightly is the relative coordinates of robot's base a
 
 ## 6. Training Graph
 
+### 6.1 TAMER
+We observe that the performance of the reward model is getting better with more training samples. However, there's an overfitting when surpasses around 325 training samples. 
+
+![](tamer/TAMER_training.png)
+
+### 6.2 Bayesian IRL
+Similar above.
+![](bayesianIRL/Bayesian_IRL_training.png)
+
+### 6.3 Recommendations 
+I would recommend Bayesian IRL if we do have prior knowledge about the distribution of the reward function, otherwise I would recommend an offlien TAMER framework.
 
 
-### Training and Testing result
+## Results Interpretation
+Our recording is here **[screen recording](ComleteFailure.webm)**. However, the robot does not perform well as we expected. One possbile explanation is there might not be enough training samples for estimating the reward value.
 
-#### TAMER
 
-![model evaluation](tamer/comparison_plots_joint_space.png)
-
-As we can see from the evaluation, the performance of the model gets better with more training samples. However, we can see the sign of overfitting when training with more training samples.
-
-#### BIRL
-
-![model evaluation](bayesianIRL/comparison_plots_joint_space.png)
-
-As we can see from the evaluation, the performance of the model gets better with more training samples. In general, I would recommend BIRL if we want the robot to simply learn what is demonstrated by the human expert, and under the situations where $P(\text{Demonstration} | \text{reward})$ is easy to calculate.
-
-#### Conclusion
-
-The actual performance of the robot is shown in the recording **[screen recording](ComleteFailure.webm)**. Sadly, the robot does not perform as I wish it could, mainly because the training samples are too sparse among the state space. The model overfits to the provided demonstration, and thus failed to generate reward to unseen states.
-
-# ReadMe
+# README
 
 * The **[assign_reward](assign_reward)** folder contains the code to assign reward to end-effector trajectories. The assigned rewards are saved inside the **[reward](reward)** folder.
-* The **[bayesianIRL](bayesianIRL)** folder contains 4 models that trained with different training size (108, 217, 326, 435 samples). Each model takes in 18 numbers as input, and output 3 numbers that correspond to the rewards calculated for 3 different behaviors. **[bayesianIRL.py](bayesianIRL/bayesianIRL.py)** contains the code to run the BIRL policy. **[display.py](bayesianIRL/display.py)** contains the code to display the training and testing evaluation. **[train.py](bayesianIRL/train.py)** contains the code that trains the model.
-* The **[config](config)** folder contains the simulation models.
-* The **[planning](planning)** folder contains the code to run the simulation and execute the expert trajectory. I modified the code inside **[xarmJointPlanningClient.py](planning/xarmJointPlanningClient.py)** so that it can save the end-effector position to **[eefPlanning](eefPlanning)** while executing the expert's trajectory.
-* The **[tamer](tamer)** folder contains 4 models that trained with different training size (108, 217, 326, 435 samples). Each model takes in 18 numbers as input, and output 3 numbers that correspond to the rewards calculated for 3 different behaviors. **[tamer.py](tamer/tamer.py)** contains the code to run the TAMER policy. **[display.py](tamer/display.py)** contains the code to display the training and testing evaluation. **[train.py](tamer/train.py)** contains the code that trains the model.
+* The **[bayesianIRL](bayesianIRL)** folder contains 4 models that trained with different training size (108, 217, 326, 435 samples). Each model takes in 22 numbers as input, and output 3 numbers that correspond to the rewards calculated for 3 different behaviors. **[bayesianIRL.py](bayesianIRL/bayesianIRL.py)** is Bayesian IRL.
+* **[display.py](bayesianIRL/display.py)** contains the code to display the training and testing evaluation.
+* **[train.py](bayesianIRL/train.py)** contains the code that trains the model.
+* The **[config](config)** is the simulation model.
+* The **[planning](planning)** is for running the simulation and execute the expert trajectory. We modified the code inside **[xarmJointPlanningClient.py](planning/xarmJointPlanningClient.py)** so that it can save the end-effector position to **[eefPlanning](eefPlanning)** while executing the expert's trajectory.
+* The **[tamer](tamer)** folder contains 4 models that trained with different training size (108, 217, 326, 435 samples). Each model takes in 22 numbers as input, and output 3 numbers that correspond to the rewards calculated for 3 different behaviors.
+* **[tamer.py](tamer/tamer.py)** contains the code to run the TAMER policy.
+* **[display.py](tamer/display.py)** contains the code to display the training and testing evaluation.
+* **[train.py](tamer/train.py)** contains the code that trains the model.
 
 
 
